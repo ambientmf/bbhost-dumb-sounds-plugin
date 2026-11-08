@@ -29,10 +29,12 @@ sm64_mario_oof 0.21
 sm64_mario_whoa 0.21
 xp-error 0.35
 link-hyaa 0.4
-goldeneye-silenced-pp7 1
-goldeneye-pp7-silenced-with-shell-casing 1
-goldeneye-silenced2 1
-goldeneye-silenced2-shell-casing 1
+goldeneye-pistol-silenced 1
+goldeneye-pistol-silenced2 1
+goldeneye-pistol-silenced-shell-casing 1
+goldeneye-pistol-loud 1
 goldeneye-loud-reload 1
-goldeneye-loud-reload2 1
+mm_megabuster_pew 1
+mmx_shot 0.4
+wilhelm 0.45
 EOF

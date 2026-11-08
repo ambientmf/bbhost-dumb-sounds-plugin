@@ -15,7 +15,7 @@ version=$(sed -n 's/.*"Dumb Sounds", "\([0-9.]*\)".*/\1/p' "$here/plugin/dumb_so
 [ -f "$here/build/sounds/unleveled/hit.wav" ] && [ -f "$here/build/sounds/unleveled/headshot.wav" ] ||
     "$here/tools/fetch-sounds.sh"
 "$here/tools/level-sounds.sh"
-# The others are hand-made cuts in build/sounds/unleveled; the zip goes without one that is missing.
+# The others are hand-made cuts in build/sounds/unleveled; a missing one stops the package.
 
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
@@ -24,20 +24,31 @@ cp "$here/build/dumb_sounds.dll" "$stage/plugins/"
 cp "$here/build/sounds/headshot.wav" "$here/build/sounds/hit.wav" "$stage/plugins/dumb_sounds/"
 # Every sound F9 can pick (CHOICES in plugin/dumb_sounds.c).
 for f in parry mgs-alert link-fall-down link-hyaa sm64_mario_hoohoo sm64_mario_hurt sm64_mario_oof sm64_mario_whoa \
-    xp-error goldeneye-silenced-pp7 goldeneye-pp7-silenced-with-shell-casing goldeneye-silenced2 \
-    goldeneye-silenced2-shell-casing goldeneye-loud-reload goldeneye-loud-reload2; do
+    xp-error wilhelm goldeneye-pistol-silenced goldeneye-pistol-silenced2 goldeneye-pistol-silenced-shell-casing \
+    goldeneye-pistol-loud goldeneye-loud-reload mm_megabuster_pew mmx_shot; do
     if [ -f "$here/build/sounds/$f.wav" ]; then cp "$here/build/sounds/$f.wav" "$stage/plugins/dumb_sounds/"
-    else echo "package: no build/sounds/$f.wav, left out" >&2; fi
+    else echo "package: no build/sounds/$f.wav (its cut belongs in build/sounds/unleveled)" >&2; exit 1; fi
 done
 # custom_*.wav stay out: the plugin makes them at its first start, and an
 # update extracted over an install then leaves a player's own sounds alone.
 cat > "$stage/INSTALL.txt" <<EOF
 Dumb Sounds $version - a bbhost plugin (Bloodborne 1.09)
 
-Dumb sounds in place of Bloodborne's own: the Call of Duty hit marker when
-your bullet hits a body, the Hunt: Showdown headshot, a parry (or the MGS
-alert), and Link, Mario or a Windows XP error for Beast Roar. Each
-can be swapped or turned off in F9 -> Dumb Sounds.
+Dumb sounds in place of Bloodborne's own, each picked in F9 -> Dumb Sounds:
+
+  Your bullet hits a body     the Call of Duty hit marker
+  ... a hunter's head         the Hunt: Showdown headshot
+  A gun parry                 Chapelle, or the Metal Gear Solid alert
+  Hunter Pistol / Evelyn      GoldenEye (silenced, silenced 2, silenced with
+                              its casing, loud, loud with a reload), Mega Man,
+                              Mega Man X
+  Beast Roar                  Link (stumble, hyaa), Mario (hoo-hoo, hurt, oof,
+                              whoa), the Windows XP error, the Wilhelm scream
+
+Each one can also be Custom (your own file, below) or Off (the game's own
+sound), has its own volume, and a Play button to hear it (in game).
+
+Needs bbhost with plugin support and the game's 1.09 update.
 
 Install: extract this zip into bbhost's data folder, by default
     %LOCALAPPDATA%\\bbhost\\data
@@ -54,10 +65,11 @@ volume, Reload sounds.txt, and Log sounds (every sound the game plays, to
 sounds.log, to find an event's name).
 
 Your own sound for one of them: after the first start, overwrite
-custom_hit.wav, custom_headshot.wav, custom_parry.wav or custom_beast_roar.wav
-in plugins\\dumb_sounds with your WAV (any rate, mono or stereo), pick Custom
-for it in F9 -> Dumb Sounds, and press Reload sounds.txt there if the game was
-running. Updating the plugin later leaves those files alone.
+custom_hit.wav, custom_headshot.wav, custom_parry.wav, custom_hunter_pistol.wav,
+custom_evelyn.wav or custom_beast_roar.wav in plugins\\dumb_sounds with your
+WAV (any rate, mono or stereo), pick Custom for it in F9 -> Dumb Sounds, and
+press Reload sounds.txt there if the game was running. Updating the plugin
+later leaves those files alone.
 
 Uninstall: delete plugins\\dumb_sounds.dll and the plugins\\dumb_sounds folder.
 EOF

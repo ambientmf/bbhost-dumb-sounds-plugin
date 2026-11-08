@@ -96,8 +96,8 @@ static const char DEFAULT_RULES[] =
     "hit       z006021*    hit.wav       shot priority=1 mute=s000006001\n"
     "# A gunshot (c000000720, the Hunter Pistol's and Evelyn's alike) with\n"
     "# that gun in the left hand.\n"
-    "hunter_pistol  c000000720  goldeneye-silenced-pp7.wav  weapon=14000000\n"
-    "evelyn         c000000720  goldeneye-loud-reload.wav   weapon=14100000\n"
+    "hunter_pistol  c000000720  goldeneye-pistol-silenced.wav  weapon=14000000\n"
+    "evelyn         c000000720  goldeneye-loud-reload.wav      weapon=14100000\n"
     "# The Beast Roar hunter tool's roar (z005000027 is its blast landing, a\n"
     "# moment later).\n"
     "beast_roar  s000202002  link-fall-down.wav\n";
@@ -149,20 +149,23 @@ static const Choice CHOICES[] = {
     {"beast_roar", "Mario oof", "sm64_mario_oof.wav"},
     {"beast_roar", "Mario whoa", "sm64_mario_whoa.wav"},
     {"beast_roar", "Windows XP error", "xp-error.wav"},
+    {"beast_roar", "Wilhelm scream", "wilhelm.wav"},
     {"beast_roar", "Custom", "custom_beast_roar.wav"},
-    {"hunter_pistol", "PP7 silenced", "goldeneye-silenced-pp7.wav"},
-    {"hunter_pistol", "PP7 silenced + casing", "goldeneye-pp7-silenced-with-shell-casing.wav"},
-    {"hunter_pistol", "Silenced 2", "goldeneye-silenced2.wav"},
-    {"hunter_pistol", "Silenced 2 + casing", "goldeneye-silenced2-shell-casing.wav"},
+    {"hunter_pistol", "Silenced", "goldeneye-pistol-silenced.wav"},
+    {"hunter_pistol", "Silenced 2", "goldeneye-pistol-silenced2.wav"},
+    {"hunter_pistol", "Silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav"},
+    {"hunter_pistol", "Loud", "goldeneye-pistol-loud.wav"},
     {"hunter_pistol", "Loud + reload", "goldeneye-loud-reload.wav"},
-    {"hunter_pistol", "Loud + reload 2", "goldeneye-loud-reload2.wav"},
+    {"hunter_pistol", "Mega Man", "mm_megabuster_pew.wav"},
+    {"hunter_pistol", "Mega Man X", "mmx_shot.wav"},
     {"hunter_pistol", "Custom", "custom_hunter_pistol.wav"},
     {"evelyn", "Loud + reload", "goldeneye-loud-reload.wav"},
-    {"evelyn", "PP7 silenced", "goldeneye-silenced-pp7.wav"},
-    {"evelyn", "PP7 silenced + casing", "goldeneye-pp7-silenced-with-shell-casing.wav"},
-    {"evelyn", "Silenced 2", "goldeneye-silenced2.wav"},
-    {"evelyn", "Silenced 2 + casing", "goldeneye-silenced2-shell-casing.wav"},
-    {"evelyn", "Loud + reload 2", "goldeneye-loud-reload2.wav"},
+    {"evelyn", "Silenced", "goldeneye-pistol-silenced.wav"},
+    {"evelyn", "Silenced 2", "goldeneye-pistol-silenced2.wav"},
+    {"evelyn", "Silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav"},
+    {"evelyn", "Loud", "goldeneye-pistol-loud.wav"},
+    {"evelyn", "Mega Man", "mm_megabuster_pew.wav"},
+    {"evelyn", "Mega Man X", "mmx_shot.wav"},
     {"evelyn", "Custom", "custom_evelyn.wav"},
 };
 
@@ -203,17 +206,17 @@ BB_PLUGIN_EXPORT const BbOption bb_plugin_options[] = {
     {BB_OPT_FLOAT | BB_OPT_LIVE, "parry_volume", "Parry volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_parry", "Play the parry"},
     {BB_OPT_HEADING, "gunshots", "Gunshots", "Each gun's own shot, by the gun in your left hand."},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "hunter_pistol_sound", "Hunter Pistol", 0, "PP7 silenced", 0, 0,
-     "PP7 silenced|PP7 silenced + casing|Silenced 2|Silenced 2 + casing|Loud + reload|Loud + reload 2|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "hunter_pistol_sound", "Hunter Pistol", 0, "Silenced", 0, 0,
+     "Silenced|Silenced 2|Silenced + casing|Loud|Loud + reload|Mega Man|Mega Man X|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "hunter_pistol_volume", "Hunter Pistol volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_hunter_pistol", "Play the Hunter Pistol"},
     {BB_OPT_CHOICE | BB_OPT_LIVE, "evelyn_sound", "Evelyn", 0, "Loud + reload", 0, 0,
-     "PP7 silenced|PP7 silenced + casing|Silenced 2|Silenced 2 + casing|Loud + reload|Loud + reload 2|Custom|Off"},
+     "Silenced|Silenced 2|Silenced + casing|Loud|Loud + reload|Mega Man|Mega Man X|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "evelyn_volume", "Evelyn volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_evelyn", "Play Evelyn"},
     {BB_OPT_HEADING, "tools", "Hunter tools"},
     {BB_OPT_CHOICE | BB_OPT_LIVE, "beast_roar_sound", "Beast Roar", 0, "Link stumble", 0, 0,
-     "Link stumble|Link hyaa|Mario hoo-hoo|Mario hurt|Mario oof|Mario whoa|Windows XP error|Custom|Off"},
+     "Link stumble|Link hyaa|Mario hoo-hoo|Mario hurt|Mario oof|Mario whoa|Windows XP error|Wilhelm scream|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "beast_roar_volume", "Beast Roar volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_beast_roar", "Play Beast Roar"},
     {BB_OPT_HEADING, "sounds", "Sounds"},
