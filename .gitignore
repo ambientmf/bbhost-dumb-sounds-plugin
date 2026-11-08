@@ -1,0 +1,25 @@
+# Build output, fetched and extracted sounds
+build/
+
+# Game files: never commit copyrighted content
+dump/
+CUSA*/
+eboot.bin
+*.fsb
+*.fev
+*.dcx
+*.wav
+*.webm
+*.opus
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editors
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+*.Zone.Identifier
