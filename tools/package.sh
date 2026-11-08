@@ -37,8 +37,8 @@ Dumb Sounds $version - a bbhost plugin (Bloodborne 1.09)
 Dumb sounds in place of Bloodborne's own, each picked in F9 -> Dumb Sounds:
 
   Your bullet hits a body     the Call of Duty hit marker
-  ... a hunter's head         the Hunt: Showdown headshot
-  A gun parry                 Chapelle, or the Metal Gear Solid alert
+  A bullet on a hunter's head the Hunt: Showdown headshot
+  A parry or a backstab       Chapelle, or the Metal Gear Solid alert
   Hunter Pistol / Evelyn      GoldenEye (silenced, silenced 2, silenced with
                               its casing, loud, loud with a reload), Mega Man,
                               Mega Man X
@@ -46,7 +46,9 @@ Dumb sounds in place of Bloodborne's own, each picked in F9 -> Dumb Sounds:
                               whoa), the Windows XP error, the Wilhelm scream
 
 Each one can also be Custom (your own file, below) or Off (the game's own
-sound), has its own volume, and a Play button to hear it (in game).
+sound), has its own volume, and a Play button to hear it (in game). They
+play where the game plays its own, quieter with distance (other hunters'
+shots too); the hit marker, your feedback, plays as it is.
 
 Needs bbhost with plugin support and the game's 1.09 update.
 
