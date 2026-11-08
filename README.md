@@ -7,7 +7,7 @@ A meme plugin for [bbhost](https://github.com/ambientmf/bbhost) (Bloodborne
 |---|---|
 | Your bullet hits a body | the Call of Duty hit marker, or Off |
 | Your bullet hits a hunter's head | the Hunt: Showdown headshot, or Off |
-| A gun parry | Chapelle, the Metal Gear Solid alert, or Off |
+| An enemy staggered open for a visceral: a gun parry, a heal parry (PvP) or a charged attack to the back (F9's Parry) | Chapelle, the Metal Gear Solid alert, or Off |
 | A Hunter Pistol or Evelyn shot | GoldenEye (silenced, silenced 2, silenced with its casing, loud, loud with a reload), Mega Man, Mega Man X, or Off |
 | Beast Roar | Link (stumble, hyaa), Mario (hoo-hoo, hurt, oof, whoa), the Windows XP error, the Wilhelm scream, or Off |
 
@@ -47,7 +47,7 @@ a line, the first whose event matches is used.
 NAME  EVENT  FILE  [VOLUME]  [OPTIONS]
 
 shot c000000720                                   # a gunshot (for "shot" rules)
-parry       c999999991  parry.wav           priority=3
+parry       c999999991  parry.wav           priority=3   # the stagger: parries and backstabs
 headshot    z006021060  headshot.wav        shot priority=2 mute=s000006001,c999999990
 hit         z006021*    hit.wav             shot priority=1 mute=s000006001
 beast_roar  s000202002  link-fall-down.wav
