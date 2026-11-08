@@ -6,9 +6,9 @@ A meme plugin for [bbhost](https://github.com/ambientmf/bbhost) (Bloodborne
 | Moment | Sounds (F9 > Dumb Sounds) |
 |---|---|
 | Your bullet hits a body | the Call of Duty hit marker, or Off |
-| Your bullet hits a hunter's head | the Hunt: Showdown headshot, or Off |
+| A bullet hits a hunter's head (yours, or one on you) | the Hunt: Showdown headshot, or Off |
 | An enemy staggered open for a visceral: a gun parry, a heal parry (PvP) or a charged attack to the back (F9's Parry) | Chapelle, the Metal Gear Solid alert, or Off |
-| A Hunter Pistol or Evelyn shot | GoldenEye (silenced, silenced 2, silenced with its casing, loud, loud with a reload), Mega Man, Mega Man X, or Off |
+| A Hunter Pistol or Evelyn shot (anyone's, by the gun in your left hand) | GoldenEye (silenced, silenced 2, silenced with its casing, loud, loud with a reload), Mega Man, Mega Man X, or Off |
 | Beast Roar | Link (stumble, hyaa), Mario (hoo-hoo, hurt, oof, whoa), the Windows XP error, the Wilhelm scream, or Off |
 
 Each also has **Custom**: `custom_hit.wav`, `custom_headshot.wav`,
@@ -16,7 +16,9 @@ Each also has **Custom**: `custom_hit.wav`, `custom_headshot.wav`,
 `custom_beast_roar.wav` in the plugin's folder, which
 the plugin makes at its first start as copies of the first sound, to
 overwrite with your own WAV (then Reload sounds.txt in F9 if the game is
-running). An update extracted over the plugin leaves them alone. Off leaves the game's own sound.
+running). An update extracted over the plugin leaves them alone. Off leaves the game's own sound. Each but the hit marker plays where the game plays its own:
+quieter with distance and from its side (F9's Positional sound; walls and
+rooms do not muffle it, as the game's own sounds are).
 Each has a volume of its own beside it and a Play button (in game) to hear
 what is picked, and a master volume covers them all.
 
@@ -47,9 +49,9 @@ a line, the first whose event matches is used.
 NAME  EVENT  FILE  [VOLUME]  [OPTIONS]
 
 shot c000000720                                   # a gunshot (for "shot" rules)
-parry       c999999991  parry.wav           priority=3   # the stagger: parries and backstabs
-headshot    z006021060  headshot.wav        shot priority=2 mute=s000006001,c999999990
-hit         z006021*    hit.wav             shot priority=1 mute=s000006001
+parry       c999999991  parry.wav           priority=2   # the stagger: parries and backstabs
+headshot    z006021060  headshot.wav        priority=2 mute=s000006001,c999999990
+hit         z006021*    hit.wav             shot flat priority=1 mute=s000006001
 beast_roar  s000202002  link-fall-down.wav
 ```
 
@@ -62,9 +64,17 @@ beast_roar  s000202002  link-fall-down.wav
 - `VOLUME`: 0-2, 1 (the default) the file as it is.
 - `shot`: only in the second after a gunshot, so an enemy's blow on you, which
   plays the same impact events, keeps its sound.
-- `priority=N`: a higher rule's sound cuts off a lower one's from the same
-  moment (a parry over the hit marker of its bullet) and blocks it just after.
+- `priority=N`: among rules with a priority, a higher rule's sound cuts off a
+  lower one's from the same moment (a parry over the hit marker of its bullet)
+  and blocks it just after. A rule without one (a gunshot, Beast Roar) always
+  plays out, under whatever comes after it.
 - `mute=a,b`: these events are silenced just after this one.
+- `flat`: as it is, wherever it happens: the hit marker, feedback for you.
+  Without it a sound is placed where the game plays its own.
+- `mine`: only your own: a sound where you stand, not another hunter's (NPC
+  hunters fire the same gunshot). Only your own gunshot arms the `shot` rules.
+- `weapon=N`: only while this gun is in your left hand (its EquipParamWeapon
+  id, upgrade left off: `14000000` the Hunter Pistol, `14100000` Evelyn).
 
 F9 > Dumb Sounds > Reload sounds.txt reads it again in game. To find an event's
 name, turn on Log sounds there: every event the game plays goes to

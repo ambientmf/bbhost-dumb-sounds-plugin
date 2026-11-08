@@ -3,6 +3,7 @@
 
   fsb5.py list BANK [FILTER]          the samples: index, name, rate, channels, length
   fsb5.py extract BANK NAME OUT.wav   one sample as a WAV (ATRAC9 decoded with at9dec)
+  fsb5.py extract-all BANK OUT_DIR    every sample as OUT_DIR/<index>-<name>.wav
   fsb5.py rebuild BANK OUT [NAME=FILE.wav ...]
                                       the bank written again as 16-bit PCM, every
                                       sample decoded, the named ones replaced by WAVs
@@ -109,6 +110,14 @@ def decode(bank, s):
     return r.stdout
 
 
+def write_wav(path, s, pcm):
+    with wave.open(path, "wb") as w:
+        w.setnchannels(s.channels)
+        w.setsampwidth(2)
+        w.setframerate(s.rate)
+        w.writeframes(pcm)
+
+
 def read_wav(path, rate, channels):
     with wave.open(path, "rb") as w:
         if w.getsampwidth() != 2 or w.getframerate() != rate or w.getnchannels() != channels:
@@ -177,6 +186,15 @@ def main(argv):
             w.setframerate(s.rate)
             w.writeframes(decode(bank, s))
         print(f"wrote {argv[4]}: {s.name}, {s.rate} Hz {s.channels} ch {s.frames} frames")
+    elif cmd == "extract-all":
+        out = argv[3]
+        os.makedirs(out, exist_ok=True)
+        for i, s in enumerate(bank.samples):
+            safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in s.name)
+            write_wav(os.path.join(out, f"{i:03}-{safe}.wav"), s, decode(bank, s))
+            print(f"\r{i + 1}/{len(bank.samples)}", end="", file=sys.stderr)
+        print(file=sys.stderr)
+        print(f"wrote {len(bank.samples)} samples to {out}")
     elif cmd == "rebuild":
         out = argv[3]
         swaps = dict(a.split("=", 1) for a in argv[4:])

@@ -30,6 +30,7 @@
 #include "miniaudio.h"
 
 #include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,9 +76,16 @@ static const char DEFAULT_RULES[] =
     "# OPTIONS  shot            only in the second after a gunshot (the shot\n"
     "#                          line's events), so an enemy's blow on you, which\n"
     "#                          plays the same impact events, keeps its sound\n"
-    "#          priority=N      a higher rule's sound cuts off a lower one's from\n"
-    "#                          the same moment, and blocks it just after\n"
+    "#          priority=N      among rules with a priority, a higher rule's\n"
+    "#                          sound cuts off a lower one's from the same\n"
+    "#                          moment and blocks it just after; a rule without\n"
+    "#                          one always plays out\n"
     "#          mute=a,b        these events are silenced just after this one\n"
+    "#          flat            as it is, wherever it happens (the hit marker,\n"
+    "#                          feedback for you); without it a sound is placed\n"
+    "#                          where the game plays its own\n"
+    "#          mine            only the local player's own (a sound where they\n"
+    "#                          stand), not another hunter's\n"
     "#          weapon=N        only while this gun (its EquipParamWeapon id, the\n"
     "#                          upgrade left off: 14000000 the Hunter Pistol) is\n"
     "#                          in the left hand\n"
@@ -88,14 +96,15 @@ static const char DEFAULT_RULES[] =
     "shot c000000720\n"
     "\n"
     "# A gun parry: the stagger.\n"
-    "parry     c999999991  parry.wav     priority=3\n"
-    "# A bullet on a hunter's head; c999999990 is the game's own headshot sound.\n"
-    "headshot  z006021060  headshot.wav  shot priority=2 mute=s000006001,c999999990\n"
+    "parry     c999999991  parry.wav     priority=2\n"
+    "# A bullet on a hunter's head, yours or anyone's; c999999990 is the game's\n"
+    "# own headshot sound.\n"
+    "headshot  z006021060  headshot.wav  priority=2 mute=s000006001,c999999990\n"
     "# A bullet on a body (z006020* is a wall or the ground); s000006001 the\n"
     "# pop every bullet's impact makes.\n"
-    "hit       z006021*    hit.wav       shot priority=1 mute=s000006001\n"
-    "# A gunshot (c000000720, the Hunter Pistol's and Evelyn's alike) with\n"
-    "# that gun in the left hand.\n"
+    "hit       z006021*    hit.wav       shot flat priority=1 mute=s000006001\n"
+    "# A gunshot (c000000720, the Hunter Pistol's and Evelyn's alike, anyone's,\n"
+    "# fainter the farther it is) with that gun in your left hand.\n"
     "hunter_pistol  c000000720  goldeneye-pistol-silenced.wav  weapon=14000000\n"
     "evelyn         c000000720  goldeneye-loud-reload.wav      weapon=14100000\n"
     "# The Beast Roar hunter tool's roar (z005000027 is its blast landing, a\n"
@@ -118,6 +127,8 @@ typedef struct {
     float volume;        /* F9's for the name, when set; else file_volume */
     int shot, priority;
     int weapon;          /* weapon=: only while this gun is in the left hand (0: any) */
+    int mine;            /* mine: only a sound at the local player (not another hunter's) */
+    int flat;            /* flat: played as it is, not placed where the game plays it */
     char mute[TEXT_MAX];     /* ",a,b," */
     unsigned fired;      /* the frame it last played */
 } Rule;
@@ -185,7 +196,7 @@ static FILE* sound_log;
 static int log_on;
 
 BB_PLUGIN_EXPORT const BbPluginInfo bb_plugin_info = {
-    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.0", "ambientmf",
+    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.1", "ambientmf",
     "Dumb sounds in place of the game's: the CoD hit marker on your bullets, the Hunt: Showdown headshot, a parry "
     "and Beast Roar, each picked in F9; sounds.txt in its folder names more.",
 };
@@ -220,6 +231,10 @@ BB_PLUGIN_EXPORT const BbOption bb_plugin_options[] = {
     {BB_OPT_FLOAT | BB_OPT_LIVE, "beast_roar_volume", "Beast Roar volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_beast_roar", "Play Beast Roar"},
     {BB_OPT_HEADING, "sounds", "Sounds"},
+    {BB_OPT_BOOL | BB_OPT_LIVE, "positional", "Positional sound",
+     "The sounds where the game plays them: quieter with distance, from their side. Off: every one as loud as if "
+     "it were yours.",
+     "true"},
     {BB_OPT_BOOL | BB_OPT_LIVE, "log_sounds", "Log sounds",
      "Every sound event the game plays, by name, to sounds.log in the plugin's folder, to find the names for "
      "sounds.txt.",
@@ -290,14 +305,14 @@ static int clip_for(const char* file) {
     else
         snprintf(path, sizeof path, "%s/%s", dir, file);
     /* Decoded once into memory; the other voices share it. */
-    if (ma_sound_init_from_file(&engine, path, MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL,
+    if (ma_sound_init_from_file(&engine, path, MA_SOUND_FLAG_DECODE, NULL, NULL,
                                 &c->voice[0]) != MA_SUCCESS) {
         api->log("dumb_sounds: cannot load %s", path);
         return -2;
     }
     int v = 1;
     for (; v < VOICES; v++)
-        if (ma_sound_init_copy(&engine, &c->voice[0], MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, &c->voice[v]) != MA_SUCCESS)
+        if (ma_sound_init_copy(&engine, &c->voice[0], 0, NULL, &c->voice[v]) != MA_SUCCESS)
             break;
     if (v < VOICES) {
         while (--v >= 0) ma_sound_uninit(&c->voice[v]);
@@ -390,6 +405,8 @@ static void load_rules(void) {
             else if (strncmp(tok[i], "priority=", 9) == 0) r->priority = atoi(tok[i] + 9);
             else if (strncmp(tok[i], "mute=", 5) == 0) set_list(r->mute, sizeof r->mute, tok[i] + 5);
             else if (strncmp(tok[i], "weapon=", 7) == 0) r->weapon = atoi(tok[i] + 7);
+            else if (strcmp(tok[i], "mine") == 0) r->mine = 1;
+            else if (strcmp(tok[i], "flat") == 0) r->flat = 1;
             else api->log("dumb_sounds: sounds.txt line %d: %s?", n, tok[i]);
         }
         snprintf(r->file, sizeof r->file, "%s", tok[2]);
@@ -430,10 +447,27 @@ static void rule_setup(void) {
     }
 }
 
+/* A sound's place: the world point the game played it at (y up, z the way
+ * the camera looks: left-handed, so z is turned over for miniaudio's
+ * right-handed space), and the camera that hears it. */
+typedef struct {
+    int known;
+    float x, y, z;
+} Where;
+static const Where NOWHERE = {0, 0, 0, 0};
+static int spatial = 1;           /* F9's Positional sound */
+static int camera_known;
+static float player_at[3];        /* the follow camera's focus: the player, raised */
+static int player_known;
+#define MINE_METRES 2.2f          /* a sound this near the player is theirs (their gunshot: 1.6 m from the camera focus) */
+#define FULL_METRES 4.0f          /* full volume within this; it halves at twice */
+#define FAR_METRES 80.0f
+
 static void apply_settings(void) {
     rule_setup();
     if (engine_ok) ma_engine_set_volume(&engine, (float)strtod(setting("volume", "1.0"), NULL));
     log_on = strcmp(setting("log_sounds", "false"), "true") == 0;
+    spatial = strcmp(setting("positional", "true"), "true") == 0;
     if (log_on && !sound_log) {
         char path[1100];
         snprintf(path, sizeof path, "%s/sounds.log", dir);
@@ -444,18 +478,29 @@ static void apply_settings(void) {
     }
 }
 
-static void play(Rule* r) {
+static int is_mine(Where w) {
+    if (!w.known || !player_known) return 1;  /* nothing to tell it by */
+    const float dx = w.x - player_at[0], dy = w.y - player_at[1], dz = w.z - player_at[2];
+    return dx * dx + dy * dy + dz * dz <= MINE_METRES * MINE_METRES;
+}
+
+static void play(Rule* r, Where w) {
     Clip* c = &clips[r->clip];
     ma_sound* v = &c->voice[c->next++ % VOICES];  /* the oldest voice */
     ma_sound_stop(v);
     ma_sound_set_volume(v, r->volume);
+    const int placed = spatial && !r->flat && w.known && camera_known;
+    ma_sound_set_spatialization_enabled(v, placed);
+    if (placed) {
+        ma_sound_set_position(v, w.x, w.y, -w.z);
+        ma_sound_set_min_distance(v, FULL_METRES);
+        ma_sound_set_max_distance(v, FAR_METRES);
+        ma_sound_set_doppler_factor(v, 0.0f);
+    }
     ma_sound_seek_to_pcm_frame(v, 0);
     ma_sound_start(v);
 }
 
-/* Whether the game's sound `name` is skipped, and why: a rule's name (its
- * file played in its place), or "muted" (one a rule just before silences);
- * NULL keeps the game's sound. */
 /* The gun in the local player's left hand, its upgrade and variant left off
  * (14001000, a Hunter Pistol +10, is 14000000); 0 when it cannot be read.
  * The left-hand ids are the equipment ids 0, 2 and 4 (right ones between);
@@ -470,8 +515,12 @@ static int left_weapon(void) {
     return id / 100000 * 100000;
 }
 
-static const char* decide(const char* name) {
-    if (list_has(shots, name)) last_shot = frame;
+/* Whether the game's sound `name` (played at `w`) is skipped, and why: a
+ * rule's name (its file played in its place), or "muted" (one a rule just
+ * before silences); NULL keeps the game's sound. Only the local player's
+ * own gunshot arms the "shot" rules. */
+static const char* decide(const char* name, Where w) {
+    if (list_has(shots, name) && is_mine(w)) last_shot = frame;
     for (int i = 0; i < nrules; i++)
         if (rules[i].clip != -2 && frame - rules[i].fired <= NEAR_FRAMES && list_has(rules[i].mute, name))
             return "muted";
@@ -479,19 +528,21 @@ static const char* decide(const char* name) {
     for (int i = 0; i < nrules && !r; i++)
         if (rules[i].clip != -2 && name_is(rules[i].event, name) &&
             (!rules[i].shot || frame - last_shot <= SHOT_FRAMES) &&
-            (!rules[i].weapon || rules[i].weapon == left_weapon()))
+            (!rules[i].weapon || rules[i].weapon == left_weapon()) && (!rules[i].mine || is_mine(w)))
             r = &rules[i];
     if (!r) return NULL;
+    /* Only rules with a priority cut each other off: a gunshot, whose bullet
+     * can land a frame later, plays out under its hit marker. */
     int blocked = 0;
-    for (int i = 0; i < nrules; i++) {
+    for (int i = 0; i < nrules && r->priority > 0; i++) {
         Rule* o = &rules[i];
-        if (o == r || frame - o->fired > NEAR_FRAMES) continue;
+        if (o == r || o->priority <= 0 || frame - o->fired > NEAR_FRAMES) continue;
         if (o->priority > r->priority) blocked = 1;
         else if (o->priority < r->priority && o->clip >= 0 && o->clip != r->clip)
             for (int v = 0; v < VOICES; v++) ma_sound_stop(&clips[o->clip].voice[v]);
     }
     r->fired = frame;
-    if (!blocked && r->clip >= 0) play(r);
+    if (!blocked && r->clip >= 0) play(r, w);
     return r->name;
 }
 
@@ -512,11 +563,25 @@ static int on_play(BbHookCtx* ctx, void* user) {
     }
     safe[n] = 0;
 
+    Where w = NOWHERE;
+    const float* point = user ? NULL : (const float*)(uintptr_t)ctx->arg[2];  /* the first entry's (handle, name, point) */
+    if (point) {
+        w.known = 1;
+        w.x = point[0];
+        w.y = point[1];
+        w.z = point[2];
+    }
+
     ma_mutex_lock(&lock);
-    const char* why = decide(safe);
+    const char* why = decide(safe, w);
     const int skip = why != NULL;
     if (sound_log) {
-        fprintf(sound_log, "%u %s%s%s\n", frame, safe, skip ? " -> " : "", skip ? why : "");
+        fprintf(sound_log, "%u %s%s%s", frame, safe, skip ? " -> " : "", skip ? why : "");
+        if (w.known && player_known) {
+            const float dx = w.x - player_at[0], dy = w.y - player_at[1], dz = w.z - player_at[2];
+            fprintf(sound_log, "  (%.1f m%s)", sqrtf(dx * dx + dy * dy + dz * dz), is_mine(w) ? ", mine" : "");
+        }
+        fputc('\n', sound_log);
         if (list_has(shots, safe)) log_equipment();
     }
     ma_mutex_unlock(&lock);
@@ -550,9 +615,30 @@ static void log_equipment(void) {
     fputc('\n', sound_log);
 }
 
+/* The camera that hears the plugin's sounds: miniaudio's listener, each
+ * frame, z turned over as the sounds' are. */
+static void on_camera(BbCamera* cam, void* user) {
+    (void)user;
+    if (!engine_ok) return;
+    ma_engine_listener_set_position(&engine, 0, cam->position[0], cam->position[1], -cam->position[2]);
+    ma_engine_listener_set_direction(&engine, 0, cam->forward[0], cam->forward[1], -cam->forward[2]);
+    ma_engine_listener_set_world_up(&engine, 0, cam->up[0], cam->up[1], -cam->up[2]);
+    camera_known = 1;
+}
+
 static void on_frame(void* user) {
     (void)user;
     frame++;
+    float pos[3], focus[3];
+    if (api->camera_get(pos, focus) == 0) {
+        ma_mutex_lock(&lock);
+        memcpy(player_at, focus, sizeof player_at);
+        player_known = 1;
+        ma_mutex_unlock(&lock);
+    } else {
+        player_known = 0;
+        camera_known = 0;
+    }
     if (sound_log && frame % 60 == 0) {
         ma_mutex_lock(&lock);
         if (sound_log) fflush(sound_log);
@@ -576,7 +662,7 @@ static void on_action(const char* action, void* user) {
         ma_mutex_lock(&lock);
         for (int i = 0; i < nrules; i++)
             if (strcmp(rules[i].name, action + 5) == 0) {
-                if (rules[i].clip >= 0) play(&rules[i]);
+                if (rules[i].clip >= 0) play(&rules[i], NOWHERE);
                 else api->show_message(rules[i].clip == -2 ? "Dumb Sounds: Off (the game's own sound)" : "Dumb Sounds: silenced", 2.0f);
                 break;
             }
@@ -623,6 +709,7 @@ BB_PLUGIN_EXPORT int bb_plugin_image(const BbHostApi* host) {
     if (a != 0 && b != 0) return 1;
 
     api->on_frame(on_frame, NULL);
+    if (api->version >= 13) api->on_camera(on_camera, NULL);
     api->on_option("dumb_sounds", on_option, NULL);
     api->on_action("dumb_sounds", on_action, NULL);
     return 0;
