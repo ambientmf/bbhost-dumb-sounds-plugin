@@ -2,11 +2,11 @@
 # Downloads the default hit and headshot sounds and writes them as 16-bit
 # 48 kHz mono WAVs, the format of the game's own hit sounds (sound/sprj_main.fsb).
 #   tools/fetch-sounds.sh [OUT_DIR]
-# OUT_DIR: default build/sounds; tools/fsb5.py rebuild swaps them into a bank.
+# OUT_DIR: default build/sounds/unleveled, which tools/level-sounds.sh reads.
 # Needs yt-dlp and ffmpeg on the PATH ($FFMPEG names another ffmpeg).
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
-out=${1:-$here/build/sounds}
+out=${1:-$here/build/sounds/unleveled}
 ffmpeg=${FFMPEG:-ffmpeg}
 mkdir -p "$out"
 tmp=$(mktemp -d)

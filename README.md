@@ -1,48 +1,84 @@
-# Hitmarker
+# Dumb Sounds
 
 A meme plugin for [bbhost](https://github.com/ambientmf/bbhost) (Bloodborne
-1.09): your own sounds in place of the game's when a bullet lands. By default
-a headshot plays the Hunt: Showdown headshot and a bullet's impact plays the
-Call of Duty hit marker.
+1.09): dumb sounds in place of the game's own.
 
-The game plays its sounds by event name (`headshot` is one). The plugin hooks
-that call: for an event named in its settings it answers as the game does with
-its sound off, so the game's own sound never starts, and plays the plugin's
-file through its own audio device. The game's sound files stay as they are.
+| Moment | Sounds (F9 > Dumb Sounds) |
+|---|---|
+| Your bullet hits a body | the Call of Duty hit marker, or Off |
+| Your bullet hits a hunter's head | the Hunt: Showdown headshot, or Off |
+| A gun parry | Chapelle, the Metal Gear Solid alert, or Off |
+| Beast Roar | Link, Mario (hoo-hoo, hurt, oof, whoa), the Windows XP error, or Off |
+
+Each also has **Custom**: `custom_hit.wav`, `custom_headshot.wav`,
+`custom_parry.wav` and `custom_beast_roar.wav` in the plugin's folder, which
+the plugin makes at its first start as copies of the first sound, to
+overwrite with your own WAV (then Reload sounds.txt in F9 if the game is
+running). An update extracted over the plugin leaves them alone. Off leaves the game's own sound.
+Each has a volume of its own beside it, and a master volume covers them all.
+
+The game plays its sounds by event name (`z006021058`, a bullet on a body).
+The plugin hooks that call: for an event one of its rules names, it answers as
+the game does with its sound off, so the game's own sound never starts, and
+plays its own file through miniaudio on an audio device of its own. The
+game's sound files stay as they are.
 
 ## Install
 
-1. Build `hitmarker.dll` (below) and put it in bbhost's plugins folder
-   (`<config>/plugins`, next to any other plugins you have).
-2. Put the sounds in the plugin's data folder, `<data>/plugins/hitmarker/`:
-   `headshot.wav` and `hit.wav` (`tools/fetch-sounds.sh` makes both), or any
-   WAV, MP3 or FLAC files named in the settings.
+Extract the release zip into bbhost's data folder, `%LOCALAPPDATA%\bbhost\data`
+by default (or the `paths.data` of your `bbhost.toml`):
 
-## Settings
+```
+plugins\dumb_sounds.dll
+plugins\dumb_sounds\        the sounds, and sounds.txt once it has run
+```
 
-Under `[hitmarker]` in `bbhost.toml`, or in game with F9; every one applies at once.
+The data folder stays put when bbhost is updated.
 
-| Key | Default | |
-|---|---|---|
-| `headshot_volume` | `0.35` | 0 to 2 |
-| `hit_volume` | `0.25` | 0 to 2 |
-| `headshot_sound` | `headshot.wav` | a file in the data folder, or a full path |
-| `hit_sound` | `hit.wav` | |
-| `headshot_names` | `z006021060` | the game's events the headshot sound replaces, comma-separated: a bullet on a hunter's head |
-| `hit_names` | `z006021*` | the events the hit sound replaces: a bullet on a body (walls and the ground are `z006020*`) |
-| `mute_names` | | events always silenced |
-| `after_hit_names` | `s000006001,c999999990` | events silenced in the few frames after a hit or a headshot: the impact's pop, the game's headshot sound |
-| `shot_names` | `c000000720` | a gunshot: hits and headshots count only in the second after one, so an enemy hitting you keeps the game's sound |
+## Rules: sounds.txt
 
-A name ending in `*` covers every name it starts.
-A headshot wins over a hit: the hit sound of the same moment stops.
+The plugin writes `plugins\dumb_sounds\sounds.txt` at its first start: one rule
+a line, the first whose event matches is used.
+
+```
+NAME  EVENT  FILE  [VOLUME]  [OPTIONS]
+
+shot c000000720                                   # a gunshot (for "shot" rules)
+parry       c999999991  parry.wav           priority=3
+headshot    z006021060  headshot.wav        shot priority=2 mute=s000006001,c999999990
+hit         z006021*    hit.wav             shot priority=1 mute=s000006001
+beast_roar  s000202002  link-fall-down.wav
+```
+
+- `NAME`: one word, shown in `sounds.log`. `parry`, `headshot`, `hit` and
+  `beast_roar` take their sound and volume from F9; others their `FILE`.
+- `EVENT`: the game's event; a name ending in `*` covers every name it starts.
+- `FILE`: a WAV, MP3 or FLAC in that folder, or a full path; `-` silences the
+  event with nothing in its place. A file that does not load leaves the
+  game's sound.
+- `VOLUME`: 0-2, 1 (the default) the file as it is.
+- `shot`: only in the second after a gunshot, so an enemy's blow on you, which
+  plays the same impact events, keeps its sound.
+- `priority=N`: a higher rule's sound cuts off a lower one's from the same
+  moment (a parry over the hit marker of its bullet) and blocks it just after.
+- `mute=a,b`: these events are silenced just after this one.
+
+F9 > Dumb Sounds > Reload sounds.txt reads it again in game. To find an event's
+name, turn on Log sounds there: every event the game plays goes to
+`sounds.log`, one line a frame number and a name (`-> name` for one a rule
+took). Make the sound in game a few times and look for the name that comes
+each time.
 
 ## Build
 
 ```sh
-tools/build-plugin.sh <bbhost checkout>     # build/hitmarker.dll (clang, mingw-w64 target)
-tools/fetch-sounds.sh                       # build/sounds/{hit,headshot}.wav (yt-dlp, ffmpeg)
+tools/build-plugin.sh <bbhost checkout>   # build/dumb_sounds.dll (clang, mingw-w64 target)
+tools/fetch-sounds.sh                     # build/sounds/unleveled/{hit,headshot}.wav (yt-dlp, ffmpeg)
+tools/level-sounds.sh                     # build/sounds/*.wav at the level they play at volume 1
+tools/package.sh <bbhost checkout>        # all of the above into build/dumb_sounds-<version>.zip
 ```
+
+The other sounds are cuts kept in `build/sounds/unleveled/`.
 
 `third_party/miniaudio.h` is [miniaudio](https://miniaud.io) 0.11.22 (public
 domain or MIT-0).
