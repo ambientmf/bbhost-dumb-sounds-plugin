@@ -23,8 +23,9 @@ mkdir -p "$stage/plugins/dumb_sounds"
 cp "$here/build/dumb_sounds.dll" "$stage/plugins/"
 cp "$here/build/sounds/headshot.wav" "$here/build/sounds/hit.wav" "$stage/plugins/dumb_sounds/"
 # Every sound F9 can pick (CHOICES in plugin/dumb_sounds.c).
-for f in parry mgs-alert link-fall-down sm64_mario_hoohoo sm64_mario_hurt sm64_mario_oof sm64_mario_whoa \
-    xp-error; do
+for f in parry mgs-alert link-fall-down link-hyaa sm64_mario_hoohoo sm64_mario_hurt sm64_mario_oof sm64_mario_whoa \
+    xp-error goldeneye-silenced-pp7 goldeneye-pp7-silenced-with-shell-casing goldeneye-silenced2 \
+    goldeneye-silenced2-shell-casing goldeneye-loud-reload goldeneye-loud-reload2; do
     if [ -f "$here/build/sounds/$f.wav" ]; then cp "$here/build/sounds/$f.wav" "$stage/plugins/dumb_sounds/"
     else echo "package: no build/sounds/$f.wav, left out" >&2; fi
 done

@@ -8,14 +8,15 @@ A meme plugin for [bbhost](https://github.com/ambientmf/bbhost) (Bloodborne
 | Your bullet hits a body | the Call of Duty hit marker, or Off |
 | Your bullet hits a hunter's head | the Hunt: Showdown headshot, or Off |
 | A gun parry | Chapelle, the Metal Gear Solid alert, or Off |
-| Beast Roar | Link, Mario (hoo-hoo, hurt, oof, whoa), the Windows XP error, or Off |
+| Beast Roar | Link (stumble, hyaa), Mario (hoo-hoo, hurt, oof, whoa), the Windows XP error, or Off |
 
 Each also has **Custom**: `custom_hit.wav`, `custom_headshot.wav`,
 `custom_parry.wav` and `custom_beast_roar.wav` in the plugin's folder, which
 the plugin makes at its first start as copies of the first sound, to
 overwrite with your own WAV (then Reload sounds.txt in F9 if the game is
 running). An update extracted over the plugin leaves them alone. Off leaves the game's own sound.
-Each has a volume of its own beside it, and a master volume covers them all.
+Each has a volume of its own beside it and a Play button (in game) to hear
+what is picked, and a master volume covers them all.
 
 The game plays its sounds by event name (`z006021058`, a bullet on a body).
 The plugin hooks that call: for an event one of its rules names, it answers as

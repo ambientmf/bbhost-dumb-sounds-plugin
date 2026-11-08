@@ -28,4 +28,11 @@ sm64_mario_hurt 0.175
 sm64_mario_oof 0.21
 sm64_mario_whoa 0.21
 xp-error 0.35
+link-hyaa 0.4
+goldeneye-silenced-pp7 1
+goldeneye-pp7-silenced-with-shell-casing 1
+goldeneye-silenced2 1
+goldeneye-silenced2-shell-casing 1
+goldeneye-loud-reload 1
+goldeneye-loud-reload2 1
 EOF

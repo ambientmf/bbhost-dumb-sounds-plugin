@@ -42,6 +42,10 @@
  * off: an id that names no sound (the handle's first word) and its pair. */
 #define NO_SOUND_ID 0x5ac7e94
 #define NO_SOUND_PAIR 0x5ac7e98
+/* GameDataMan*: +0x8 the local player's record, its equipment at +0x240:
+ * six words from +0x0c (which hand's slot is up, by the look of them), the
+ * sixteen EquipParamWeapon/armour ids from +0x64. */
+#define GAME_DATA_MAN 0x593b130
 
 #define VOICES 8
 #define MAX_CLIPS 32
@@ -74,6 +78,9 @@ static const char DEFAULT_RULES[] =
     "#          priority=N      a higher rule's sound cuts off a lower one's from\n"
     "#                          the same moment, and blocks it just after\n"
     "#          mute=a,b        these events are silenced just after this one\n"
+    "#          weapon=N        only while this gun (its EquipParamWeapon id, the\n"
+    "#                          upgrade left off: 14000000 the Hunter Pistol) is\n"
+    "#                          in the left hand\n"
     "#\n"
     "# A rule whose file does not load leaves the game's sound alone.\n"
     "\n"
@@ -87,6 +94,10 @@ static const char DEFAULT_RULES[] =
     "# A bullet on a body (z006020* is a wall or the ground); s000006001 the\n"
     "# pop every bullet's impact makes.\n"
     "hit       z006021*    hit.wav       shot priority=1 mute=s000006001\n"
+    "# A gunshot (c000000720, the Hunter Pistol's and Evelyn's alike) with\n"
+    "# that gun in the left hand.\n"
+    "hunter_pistol  c000000720  goldeneye-silenced-pp7.wav  weapon=14000000\n"
+    "evelyn         c000000720  goldeneye-loud-reload.wav   weapon=14100000\n"
     "# The Beast Roar hunter tool's roar (z005000027 is its blast landing, a\n"
     "# moment later).\n"
     "beast_roar  s000202002  link-fall-down.wav\n";
@@ -106,6 +117,7 @@ typedef struct {
     float file_volume;   /* sounds.txt's */
     float volume;        /* F9's for the name, when set; else file_volume */
     int shot, priority;
+    int weapon;          /* weapon=: only while this gun is in the left hand (0: any) */
     char mute[TEXT_MAX];     /* ",a,b," */
     unsigned fired;      /* the frame it last played */
 } Rule;
@@ -130,13 +142,28 @@ static const Choice CHOICES[] = {
     {"parry", "Chapelle", "parry.wav"},
     {"parry", "MGS alert", "mgs-alert.wav"},
     {"parry", "Custom", "custom_parry.wav"},
-    {"beast_roar", "Link", "link-fall-down.wav"},
+    {"beast_roar", "Link stumble", "link-fall-down.wav"},
+    {"beast_roar", "Link hyaa", "link-hyaa.wav"},
     {"beast_roar", "Mario hoo-hoo", "sm64_mario_hoohoo.wav"},
     {"beast_roar", "Mario hurt", "sm64_mario_hurt.wav"},
     {"beast_roar", "Mario oof", "sm64_mario_oof.wav"},
     {"beast_roar", "Mario whoa", "sm64_mario_whoa.wav"},
     {"beast_roar", "Windows XP error", "xp-error.wav"},
     {"beast_roar", "Custom", "custom_beast_roar.wav"},
+    {"hunter_pistol", "PP7 silenced", "goldeneye-silenced-pp7.wav"},
+    {"hunter_pistol", "PP7 silenced + casing", "goldeneye-pp7-silenced-with-shell-casing.wav"},
+    {"hunter_pistol", "Silenced 2", "goldeneye-silenced2.wav"},
+    {"hunter_pistol", "Silenced 2 + casing", "goldeneye-silenced2-shell-casing.wav"},
+    {"hunter_pistol", "Loud + reload", "goldeneye-loud-reload.wav"},
+    {"hunter_pistol", "Loud + reload 2", "goldeneye-loud-reload2.wav"},
+    {"hunter_pistol", "Custom", "custom_hunter_pistol.wav"},
+    {"evelyn", "Loud + reload", "goldeneye-loud-reload.wav"},
+    {"evelyn", "PP7 silenced", "goldeneye-silenced-pp7.wav"},
+    {"evelyn", "PP7 silenced + casing", "goldeneye-pp7-silenced-with-shell-casing.wav"},
+    {"evelyn", "Silenced 2", "goldeneye-silenced2.wav"},
+    {"evelyn", "Silenced 2 + casing", "goldeneye-silenced2-shell-casing.wav"},
+    {"evelyn", "Loud + reload 2", "goldeneye-loud-reload2.wav"},
+    {"evelyn", "Custom", "custom_evelyn.wav"},
 };
 
 static const BbHostApi* api;
@@ -168,14 +195,27 @@ BB_PLUGIN_EXPORT const BbOption bb_plugin_options[] = {
      "yours to overwrite (then Reload sounds.txt). Off: the game's sound."},
     {BB_OPT_CHOICE | BB_OPT_LIVE, "hit_sound", "Hit marker", 0, "CoD", 0, 0, "CoD|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "hit_volume", "Hit marker volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_hit", "Play the hit marker"},
     {BB_OPT_CHOICE | BB_OPT_LIVE, "headshot_sound", "Headshot", 0, "Hunt", 0, 0, "Hunt|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "headshot_volume", "Headshot volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_headshot", "Play the headshot"},
     {BB_OPT_CHOICE | BB_OPT_LIVE, "parry_sound", "Parry", 0, "Chapelle", 0, 0, "Chapelle|MGS alert|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "parry_volume", "Parry volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_parry", "Play the parry"},
+    {BB_OPT_HEADING, "gunshots", "Gunshots", "Each gun's own shot, by the gun in your left hand."},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "hunter_pistol_sound", "Hunter Pistol", 0, "PP7 silenced", 0, 0,
+     "PP7 silenced|PP7 silenced + casing|Silenced 2|Silenced 2 + casing|Loud + reload|Loud + reload 2|Custom|Off"},
+    {BB_OPT_FLOAT | BB_OPT_LIVE, "hunter_pistol_volume", "Hunter Pistol volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_hunter_pistol", "Play the Hunter Pistol"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "evelyn_sound", "Evelyn", 0, "Loud + reload", 0, 0,
+     "PP7 silenced|PP7 silenced + casing|Silenced 2|Silenced 2 + casing|Loud + reload|Loud + reload 2|Custom|Off"},
+    {BB_OPT_FLOAT | BB_OPT_LIVE, "evelyn_volume", "Evelyn volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_evelyn", "Play Evelyn"},
     {BB_OPT_HEADING, "tools", "Hunter tools"},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "beast_roar_sound", "Beast Roar", 0, "Link", 0, 0,
-     "Link|Mario hoo-hoo|Mario hurt|Mario oof|Mario whoa|Windows XP error|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "beast_roar_sound", "Beast Roar", 0, "Link stumble", 0, 0,
+     "Link stumble|Link hyaa|Mario hoo-hoo|Mario hurt|Mario oof|Mario whoa|Windows XP error|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "beast_roar_volume", "Beast Roar volume", 0, "1.0", 0.0, 2.0},
+    {BB_OPT_ACTION, "play_beast_roar", "Play Beast Roar"},
     {BB_OPT_HEADING, "sounds", "Sounds"},
     {BB_OPT_BOOL | BB_OPT_LIVE, "log_sounds", "Log sounds",
      "Every sound event the game plays, by name, to sounds.log in the plugin's folder, to find the names for "
@@ -346,6 +386,7 @@ static void load_rules(void) {
             if (strcmp(tok[i], "shot") == 0) r->shot = 1;
             else if (strncmp(tok[i], "priority=", 9) == 0) r->priority = atoi(tok[i] + 9);
             else if (strncmp(tok[i], "mute=", 5) == 0) set_list(r->mute, sizeof r->mute, tok[i] + 5);
+            else if (strncmp(tok[i], "weapon=", 7) == 0) r->weapon = atoi(tok[i] + 7);
             else api->log("dumb_sounds: sounds.txt line %d: %s?", n, tok[i]);
         }
         snprintf(r->file, sizeof r->file, "%s", tok[2]);
@@ -412,6 +453,20 @@ static void play(Rule* r) {
 /* Whether the game's sound `name` is skipped, and why: a rule's name (its
  * file played in its place), or "muted" (one a rule just before silences);
  * NULL keeps the game's sound. */
+/* The gun in the local player's left hand, its upgrade and variant left off
+ * (14001000, a Hunter Pistol +10, is 14000000); 0 when it cannot be read.
+ * The left-hand ids are the equipment ids 0, 2 and 4 (right ones between);
+ * which is up is taken as the first of the six words before them. */
+static int left_weapon(void) {
+    uint64_t man = 0, record = 0;
+    uint32_t up = 0;
+    int32_t id = 0;
+    if (api->read(GAME_DATA_MAN, &man, 8) != 0 || !man || api->read(man + 0x8, &record, 8) != 0 || !record) return 0;
+    if (api->read(record + 0x240 + 0x0c, &up, 4) != 0 || up > 2) up = 0;
+    if (api->read(record + 0x240 + 0x64 + 8 * up, &id, 4) != 0 || id <= 0) return 0;
+    return id / 100000 * 100000;
+}
+
 static const char* decide(const char* name) {
     if (list_has(shots, name)) last_shot = frame;
     for (int i = 0; i < nrules; i++)
@@ -420,7 +475,8 @@ static const char* decide(const char* name) {
     Rule* r = NULL;
     for (int i = 0; i < nrules && !r; i++)
         if (rules[i].clip != -2 && name_is(rules[i].event, name) &&
-            (!rules[i].shot || frame - last_shot <= SHOT_FRAMES))
+            (!rules[i].shot || frame - last_shot <= SHOT_FRAMES) &&
+            (!rules[i].weapon || rules[i].weapon == left_weapon()))
             r = &rules[i];
     if (!r) return NULL;
     int blocked = 0;
@@ -435,6 +491,8 @@ static const char* decide(const char* name) {
     if (!blocked && r->clip >= 0) play(r);
     return r->name;
 }
+
+static void log_equipment(void);
 
 /* The play function: the event's name is the start of its second argument.
  * A skipped one is answered with an empty handle, as the game's own call
@@ -454,7 +512,10 @@ static int on_play(BbHookCtx* ctx, void* user) {
     ma_mutex_lock(&lock);
     const char* why = decide(safe);
     const int skip = why != NULL;
-    if (sound_log) fprintf(sound_log, "%u %s%s%s\n", frame, safe, skip ? " -> " : "", skip ? why : "");
+    if (sound_log) {
+        fprintf(sound_log, "%u %s%s%s\n", frame, safe, skip ? " -> " : "", skip ? why : "");
+        if (list_has(shots, safe)) log_equipment();
+    }
     ma_mutex_unlock(&lock);
     if (!skip) return 0;
 
@@ -468,6 +529,22 @@ static int on_play(BbHookCtx* ctx, void* user) {
     }
     ctx->ret = ctx->arg[0];
     return 1;
+}
+
+/* With Log sounds on: the equipment as a gunshot plays, to tell the guns
+ * apart (they share their shot's events). */
+static void log_equipment(void) {
+    uint64_t man = 0, record = 0;
+    if (api->read(GAME_DATA_MAN, &man, 8) != 0 || !man || api->read(man + 0x8, &record, 8) != 0 || !record) return;
+    uint32_t fields[6];
+    int32_t ids[16];
+    if (api->read(record + 0x240 + 0x0c, fields, sizeof fields) != 0 ||
+        api->read(record + 0x240 + 0x64, ids, sizeof ids) != 0)
+        return;
+    fprintf(sound_log, "  equipment: %u %u %u %u %u %u |", fields[0], fields[1], fields[2], fields[3], fields[4],
+            fields[5]);
+    for (int i = 0; i < 8; i++) fprintf(sound_log, " %d", ids[i]);
+    fputc('\n', sound_log);
 }
 
 static void on_frame(void* user) {
@@ -491,6 +568,18 @@ static void on_option(const char* key, const char* value, void* user) {
 
 static void on_action(const char* action, void* user) {
     (void)user;
+    /* play_<name>: the rule's sound as it is picked, at its volume. */
+    if (strncmp(action, "play_", 5) == 0) {
+        ma_mutex_lock(&lock);
+        for (int i = 0; i < nrules; i++)
+            if (strcmp(rules[i].name, action + 5) == 0) {
+                if (rules[i].clip >= 0) play(&rules[i]);
+                else api->show_message(rules[i].clip == -2 ? "Dumb Sounds: Off (the game's own sound)" : "Dumb Sounds: silenced", 2.0f);
+                break;
+            }
+        ma_mutex_unlock(&lock);
+        return;
+    }
     if (strcmp(action, "reload") != 0) return;
     ma_mutex_lock(&lock);
     load_rules();
