@@ -144,40 +144,41 @@ typedef struct {
     const char* rule;
     const char* label;
     const char* file;
+    const char* old; /* its label before 0.1.4, still read from bbhost.toml */
 } Choice;
 
 static const Choice CHOICES[] = {
-    {"hit", "CoD", "hit.wav"},
+    {"hit", "Call of Duty hit marker", "hit.wav", "CoD"},
     {"hit", "Custom", "custom_hit.wav"},
-    {"headshot", "Hunt", "headshot.wav"},
+    {"headshot", "Hunt: Showdown headshot", "headshot.wav", "Hunt"},
     {"headshot", "Custom", "custom_headshot.wav"},
     {"parry", "Chapelle", "parry.wav"},
-    {"parry", "MGS alert", "mgs-alert.wav"},
+    {"parry", "Metal Gear Solid alert", "mgs-alert.wav", "MGS alert"},
     {"parry", "Custom", "custom_parry.wav"},
-    {"beast_roar", "Link stumble", "link-fall-down.wav"},
-    {"beast_roar", "Link hyaa", "link-hyaa.wav"},
-    {"beast_roar", "Mario hoo-hoo", "sm64_mario_hoohoo.wav"},
-    {"beast_roar", "Mario hurt", "sm64_mario_hurt.wav"},
-    {"beast_roar", "Mario oof", "sm64_mario_oof.wav"},
-    {"beast_roar", "Mario whoa", "sm64_mario_whoa.wav"},
+    {"beast_roar", "Zelda OoT Link stumble", "link-fall-down.wav", "Link stumble"},
+    {"beast_roar", "Zelda OoT Link hyaa", "link-hyaa.wav", "Link hyaa"},
+    {"beast_roar", "SM64 Mario hoo-hoo", "sm64_mario_hoohoo.wav", "Mario hoo-hoo"},
+    {"beast_roar", "SM64 Mario hurt", "sm64_mario_hurt.wav", "Mario hurt"},
+    {"beast_roar", "SM64 Mario oof", "sm64_mario_oof.wav", "Mario oof"},
+    {"beast_roar", "SM64 Mario whoa", "sm64_mario_whoa.wav", "Mario whoa"},
     {"beast_roar", "Windows XP error", "xp-error.wav"},
     {"beast_roar", "Wilhelm scream", "wilhelm.wav"},
     {"beast_roar", "Custom", "custom_beast_roar.wav"},
-    {"hunter_pistol", "Silenced", "goldeneye-pistol-silenced.wav"},
-    {"hunter_pistol", "Silenced 2", "goldeneye-pistol-silenced2.wav"},
-    {"hunter_pistol", "Silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav"},
-    {"hunter_pistol", "Loud", "goldeneye-pistol-loud.wav"},
-    {"hunter_pistol", "Loud + reload", "goldeneye-loud-reload.wav"},
-    {"hunter_pistol", "Mega Man", "mm_megabuster_pew.wav"},
-    {"hunter_pistol", "Mega Man X", "mmx_shot.wav"},
+    {"hunter_pistol", "GoldenEye N64 pistol silenced", "goldeneye-pistol-silenced.wav", "Silenced"},
+    {"hunter_pistol", "GoldenEye N64 pistol silenced 2", "goldeneye-pistol-silenced2.wav", "Silenced 2"},
+    {"hunter_pistol", "GoldenEye N64 pistol silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav", "Silenced + casing"},
+    {"hunter_pistol", "GoldenEye N64 pistol loud", "goldeneye-pistol-loud.wav", "Loud"},
+    {"hunter_pistol", "GoldenEye N64 pistol loud + reload", "goldeneye-loud-reload.wav", "Loud + reload"},
+    {"hunter_pistol", "Mega Man buster", "mm_megabuster_pew.wav", "Mega Man"},
+    {"hunter_pistol", "Mega Man X buster", "mmx_shot.wav", "Mega Man X"},
     {"hunter_pistol", "Custom", "custom_hunter_pistol.wav"},
-    {"evelyn", "Loud + reload", "goldeneye-loud-reload.wav"},
-    {"evelyn", "Silenced", "goldeneye-pistol-silenced.wav"},
-    {"evelyn", "Silenced 2", "goldeneye-pistol-silenced2.wav"},
-    {"evelyn", "Silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav"},
-    {"evelyn", "Loud", "goldeneye-pistol-loud.wav"},
-    {"evelyn", "Mega Man", "mm_megabuster_pew.wav"},
-    {"evelyn", "Mega Man X", "mmx_shot.wav"},
+    {"evelyn", "GoldenEye N64 pistol loud + reload", "goldeneye-loud-reload.wav", "Loud + reload"},
+    {"evelyn", "GoldenEye N64 pistol silenced", "goldeneye-pistol-silenced.wav", "Silenced"},
+    {"evelyn", "GoldenEye N64 pistol silenced 2", "goldeneye-pistol-silenced2.wav", "Silenced 2"},
+    {"evelyn", "GoldenEye N64 pistol silenced + casing", "goldeneye-pistol-silenced-shell-casing.wav", "Silenced + casing"},
+    {"evelyn", "GoldenEye N64 pistol loud", "goldeneye-pistol-loud.wav", "Loud"},
+    {"evelyn", "Mega Man buster", "mm_megabuster_pew.wav", "Mega Man"},
+    {"evelyn", "Mega Man X buster", "mmx_shot.wav", "Mega Man X"},
     {"evelyn", "Custom", "custom_evelyn.wav"},
 };
 
@@ -197,7 +198,7 @@ static FILE* sound_log;
 static int log_on;
 
 BB_PLUGIN_EXPORT const BbPluginInfo bb_plugin_info = {
-    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.3", "ambientmf",
+    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.4", "ambientmf",
     "Dumb sounds in place of the game's: the CoD hit marker on your bullets, the Hunt: Showdown headshot, a parry "
     "and Beast Roar, each picked in F9; sounds.txt in its folder names more.",
 };
@@ -208,27 +209,27 @@ BB_PLUGIN_EXPORT const BbOption bb_plugin_options[] = {
     {BB_OPT_HEADING, "gun", "Gun",
      "A bullet on a body, on a hunter's head, and a gun parry. Custom: custom_<sound>.wav in the plugin's folder, "
      "yours to overwrite (then Reload sounds.txt). Off: the game's sound."},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "hit_sound", "Hit marker", 0, "CoD", 0, 0, "CoD|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "hit_sound", "Hit marker", 0, "Call of Duty hit marker", 0, 0, "Call of Duty hit marker|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "hit_volume", "Hit marker volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_hit", "Play the hit marker"},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "headshot_sound", "Headshot", 0, "Hunt", 0, 0, "Hunt|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "headshot_sound", "Headshot", 0, "Hunt: Showdown headshot", 0, 0, "Hunt: Showdown headshot|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "headshot_volume", "Headshot volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_headshot", "Play the headshot"},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "parry_sound", "Parry", 0, "Chapelle", 0, 0, "Chapelle|MGS alert|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "parry_sound", "Parry", 0, "Chapelle", 0, 0, "Chapelle|Metal Gear Solid alert|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "parry_volume", "Parry volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_parry", "Play the parry"},
     {BB_OPT_HEADING, "gunshots", "Gunshots", "Each gun's own shot, by the gun in your left hand."},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "hunter_pistol_sound", "Hunter Pistol", 0, "Silenced", 0, 0,
-     "Silenced|Silenced 2|Silenced + casing|Loud|Loud + reload|Mega Man|Mega Man X|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "hunter_pistol_sound", "Hunter Pistol", 0, "GoldenEye N64 pistol silenced", 0, 0,
+     "GoldenEye N64 pistol silenced|GoldenEye N64 pistol silenced 2|GoldenEye N64 pistol silenced + casing|GoldenEye N64 pistol loud|GoldenEye N64 pistol loud + reload|Mega Man buster|Mega Man X buster|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "hunter_pistol_volume", "Hunter Pistol volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_hunter_pistol", "Play the Hunter Pistol"},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "evelyn_sound", "Evelyn", 0, "Loud + reload", 0, 0,
-     "Silenced|Silenced 2|Silenced + casing|Loud|Loud + reload|Mega Man|Mega Man X|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "evelyn_sound", "Evelyn", 0, "GoldenEye N64 pistol loud + reload", 0, 0,
+     "GoldenEye N64 pistol silenced|GoldenEye N64 pistol silenced 2|GoldenEye N64 pistol silenced + casing|GoldenEye N64 pistol loud|GoldenEye N64 pistol loud + reload|Mega Man buster|Mega Man X buster|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "evelyn_volume", "Evelyn volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_evelyn", "Play Evelyn"},
     {BB_OPT_HEADING, "tools", "Hunter tools"},
-    {BB_OPT_CHOICE | BB_OPT_LIVE, "beast_roar_sound", "Beast Roar", 0, "Link stumble", 0, 0,
-     "Link stumble|Link hyaa|Mario hoo-hoo|Mario hurt|Mario oof|Mario whoa|Windows XP error|Wilhelm scream|Custom|Off"},
+    {BB_OPT_CHOICE | BB_OPT_LIVE, "beast_roar_sound", "Beast Roar", 0, "Zelda OoT Link stumble", 0, 0,
+     "Zelda OoT Link stumble|Zelda OoT Link hyaa|SM64 Mario hoo-hoo|SM64 Mario hurt|SM64 Mario oof|SM64 Mario whoa|Windows XP error|Wilhelm scream|Custom|Off"},
     {BB_OPT_FLOAT | BB_OPT_LIVE, "beast_roar_volume", "Beast Roar volume", 0, "1.0", 0.0, 2.0},
     {BB_OPT_ACTION, "play_beast_roar", "Play Beast Roar"},
     {BB_OPT_HEADING, "sounds", "Sounds"},
@@ -439,7 +440,8 @@ static void rule_setup(void) {
             continue;
         }
         for (size_t c = 0; c < sizeof CHOICES / sizeof CHOICES[0]; c++)
-            if (strcmp(CHOICES[c].rule, r->name) == 0 && strcmp(CHOICES[c].label, pick) == 0)
+            if (strcmp(CHOICES[c].rule, r->name) == 0 && (strcmp(CHOICES[c].label, pick) == 0 ||
+                                                       (CHOICES[c].old && strcmp(CHOICES[c].old, pick) == 0)))
                 file = CHOICES[c].file;
         r->clip = strcmp(file, "-") == 0 ? -1 : clip_for(file);
         snprintf(key, sizeof key, "%s_volume", r->name);
