@@ -36,7 +36,7 @@ Dumb Sounds $version - a bbhost plugin (Bloodborne 1.09)
 
 Dumb sounds in place of Bloodborne's own, each picked in F9 -> Dumb Sounds:
 
-  Your bullet hits a body     the Call of Duty hit marker
+  Your bullet hits a body     the Call of Duty hit marker (Gatling Gun too)
   A bullet on a hunter's head the Hunt: Showdown headshot
   A parry or a backstab       Chapelle, or the Metal Gear Solid alert
   Hunter Pistol / Evelyn      GoldenEye (silenced, silenced 2, silenced with

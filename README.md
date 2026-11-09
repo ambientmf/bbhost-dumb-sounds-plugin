@@ -5,7 +5,7 @@ A meme plugin for [bbhost](https://github.com/ambientmf/bbhost) (Bloodborne
 
 | Moment | Sounds (F9 > Dumb Sounds) |
 |---|---|
-| Your bullet hits a body | the Call of Duty hit marker, or Off |
+| Your bullet (Gatling Gun too) hits a body | the Call of Duty hit marker, or Off |
 | A bullet hits a hunter's head (yours, or one on you) | the Hunt: Showdown headshot, or Off |
 | An enemy staggered open for a visceral: a gun parry, a heal parry (PvP) or a charged attack to the back (F9's Parry) | Chapelle, the Metal Gear Solid alert, or Off |
 | A Hunter Pistol or Evelyn shot (anyone's, by the gun in your left hand) | GoldenEye (silenced, silenced 2, silenced with its casing, loud, loud with a reload), Mega Man, Mega Man X, or Off |
