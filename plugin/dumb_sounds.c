@@ -92,9 +92,9 @@ static const char DEFAULT_RULES[] =
     "#\n"
     "# A rule whose file does not load leaves the game's sound alone.\n"
     "\n"
-    "# A hunter's gunshot (c000000720), and each of the Gatling Gun's bullets\n"
-    "# (s000005001).\n"
-    "shot c000000720 s000005001\n"
+    "# A hunter's gunshot (c000000720), each of the Gatling Gun's bullets\n"
+    "# (s000005001), and the Cannon's shot (c000000730, s000631301).\n"
+    "shot c000000720 s000005001 c000000730 s000631301\n"
     "\n"
     "# A gun parry: the stagger.\n"
     "parry     c999999991  parry.wav     priority=2\n"
@@ -197,7 +197,7 @@ static FILE* sound_log;
 static int log_on;
 
 BB_PLUGIN_EXPORT const BbPluginInfo bb_plugin_info = {
-    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.2", "ambientmf",
+    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.3", "ambientmf",
     "Dumb sounds in place of the game's: the CoD hit marker on your bullets, the Hunt: Showdown headshot, a parry "
     "and Beast Roar, each picked in F9; sounds.txt in its folder names more.",
 };
