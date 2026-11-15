@@ -1,5 +1,6 @@
 #!/bin/sh
-# Builds plugin/dumb_sounds.c into a Windows DLL with clang + mingw-w64.
+# Builds plugin/dumb_sounds.c into a Windows DLL with clang + mingw-w64, the
+# built-in sounds (build/sounds/*.wav, from tools/level-sounds.sh) inside it.
 #   tools/build-plugin.sh [BBHOST_SRC] [OUT_DIR]
 # BBHOST_SRC: a bbhost checkout (for include/bbhost_plugin.h); or set $BBHOST_SRC
 # OUT_DIR:    where the DLL goes, default build/
@@ -9,6 +10,6 @@ bbhost=${1:-${BBHOST_SRC:?usage: tools/build-plugin.sh BBHOST_SRC [OUT_DIR] (or 
 outdir=${2:-$here/build}
 mkdir -p "$outdir"
 prlimit --as=4000000000 clang --target=x86_64-w64-mingw32 -O2 -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -shared \
-    -I"$bbhost/include" -I"$here/third_party" -o "$outdir/dumb_sounds.dll" "$here/plugin/dumb_sounds.c" \
+    -DSOUNDS_DIR="\"$here/build/sounds\"" -I"$bbhost/include" -I"$here/third_party" -o "$outdir/dumb_sounds.dll" "$here/plugin/dumb_sounds.c" \
     -static -lole32
 echo "built $outdir/dumb_sounds.dll"

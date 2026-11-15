@@ -70,8 +70,9 @@ static const char DEFAULT_RULES[] =
     "# EVENT    the game's sound event (F9 > Dumb Sounds > Log sounds writes every\n"
     "#          one the game plays to sounds.log); a name ending in * covers\n"
     "#          every name it starts\n"
-    "# FILE     a WAV, MP3 or FLAC in this folder, or a full path; - silences\n"
-    "#          the event with nothing in its place\n"
+    "# FILE     a built-in sound (the names below, kept inside the plugin), a\n"
+    "#          WAV, MP3 or FLAC in this folder, or a full path; - silences the\n"
+    "#          event with nothing in its place\n"
     "# VOLUME   0-2, 1 the file as it is (the default)\n"
     "# OPTIONS  shot            only in the second after a gunshot (the shot\n"
     "#                          line's events), so an enemy's blow on you, which\n"
@@ -136,9 +137,9 @@ typedef struct {
 
 /* The built-in rules' sounds, picked in F9 (<name>_sound); the files are
  * leveled to play at volume 1 (tools/level-sounds.sh). "Custom" plays
- * custom_<name>.wav, the player's to overwrite with their own: the plugin
- * makes it, a copy of the rule's first sound, when it is missing, so an
- * update that brings new files leaves a player's own alone. "Off" leaves
+ * custom_<name>.wav in the plugin's folder, the player's to overwrite with
+ * their own: the plugin makes it, a copy of the rule's first sound, when it
+ * is missing. "Off" leaves
  * the game's own sound. */
 typedef struct {
     const char* rule;
@@ -146,6 +147,51 @@ typedef struct {
     const char* file;
     const char* old; /* its label before 0.1.4, still read from bbhost.toml */
 } Choice;
+
+/* The built-in sounds, inside the plugin itself: each build/sounds/<file>
+ * (SOUNDS_DIR, from tools/build-plugin.sh) assembled into the DLL's read-only
+ * data. A rule's FILE of one of these names plays it from there. */
+#define BUILT_IN(X) \
+    X(hit, "hit.wav") \
+    X(headshot, "headshot.wav") \
+    X(parry, "parry.wav") \
+    X(mgs_alert, "mgs-alert.wav") \
+    X(link_fall_down, "link-fall-down.wav") \
+    X(link_hyaa, "link-hyaa.wav") \
+    X(sm64_mario_hoohoo, "sm64_mario_hoohoo.wav") \
+    X(sm64_mario_hurt, "sm64_mario_hurt.wav") \
+    X(sm64_mario_oof, "sm64_mario_oof.wav") \
+    X(sm64_mario_whoa, "sm64_mario_whoa.wav") \
+    X(xp_error, "xp-error.wav") \
+    X(wilhelm, "wilhelm.wav") \
+    X(goldeneye_pistol_silenced, "goldeneye-pistol-silenced.wav") \
+    X(goldeneye_pistol_silenced2, "goldeneye-pistol-silenced2.wav") \
+    X(goldeneye_pistol_silenced_shell_casing, "goldeneye-pistol-silenced-shell-casing.wav") \
+    X(goldeneye_pistol_loud, "goldeneye-pistol-loud.wav") \
+    X(goldeneye_loud_reload, "goldeneye-loud-reload.wav") \
+    X(mm_megabuster_pew, "mm_megabuster_pew.wav") \
+    X(mmx_shot, "mmx_shot.wav")
+
+#define BUILT_IN_DATA(id, file)                                                                      \
+    __asm__(".section .rdata,\"dr\"\n.balign 16\nsound_" #id ":\n.incbin \"" SOUNDS_DIR "/" file "\"\n" \
+            "sound_" #id "_end:\n.text\n");                                                           \
+    extern const unsigned char sound_##id[], sound_##id##_end[];
+BUILT_IN(BUILT_IN_DATA)
+
+typedef struct {
+    const char* file;
+    const unsigned char* data;
+    const unsigned char* end;
+} BuiltIn;
+
+#define BUILT_IN_ROW(id, file) {file, sound_##id, sound_##id##_end},
+static const BuiltIn BUILT_INS[] = {BUILT_IN(BUILT_IN_ROW)};
+
+static const BuiltIn* built_in(const char* file) {
+    for (size_t i = 0; i < sizeof BUILT_INS / sizeof BUILT_INS[0]; i++)
+        if (strcmp(BUILT_INS[i].file, file) == 0) return &BUILT_INS[i];
+    return NULL;
+}
 
 static const Choice CHOICES[] = {
     {"hit", "Call of Duty hit marker", "hit.wav", "CoD"},
@@ -198,7 +244,7 @@ static FILE* sound_log;
 static int log_on;
 
 BB_PLUGIN_EXPORT const BbPluginInfo bb_plugin_info = {
-    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.4", "ambientmf",
+    BB_PLUGIN_API_VERSION, 0, "dumb_sounds", "Dumb Sounds", "0.1.5", "ambientmf",
     "Dumb sounds in place of the game's: the CoD hit marker on your bullets, the Hunt: Showdown headshot, a parry "
     "and Beast Roar, each picked in F9; sounds.txt in its folder names more.",
 };
@@ -302,7 +348,8 @@ static int clip_for(const char* file) {
     memset(c, 0, sizeof *c);
     snprintf(c->file, sizeof c->file, "%s", file);
     char path[2048];
-    if (file[0] == '/' || file[0] == '\\' || (file[0] && file[1] == ':'))
+    /* A built-in sound's name is the one its data is registered under. */
+    if (built_in(file) || file[0] == '/' || file[0] == '\\' || (file[0] && file[1] == ':'))
         snprintf(path, sizeof path, "%s", file);
     else
         snprintf(path, sizeof path, "%s/%s", dir, file);
@@ -329,7 +376,7 @@ static int clip_for(const char* file) {
 static void make_custom_files(void) {
     for (size_t c = 0; c < sizeof CHOICES / sizeof CHOICES[0]; c++) {
         if (strcmp(CHOICES[c].label, "Custom") != 0) continue;
-        char to[1100], from[1100];
+        char to[1100];
         snprintf(to, sizeof to, "%s/%s", dir, CHOICES[c].file);
         FILE* t = fopen(to, "rb");
         if (t) {
@@ -339,18 +386,13 @@ static void make_custom_files(void) {
         const char* first = NULL;
         for (size_t k = 0; k < c && !first; k++)
             if (strcmp(CHOICES[k].rule, CHOICES[c].rule) == 0) first = CHOICES[k].file;
-        if (!first) continue;
-        snprintf(from, sizeof from, "%s/%s", dir, first);
-        FILE* f = fopen(from, "rb");
-        if (!f) continue;
+        const BuiltIn* b = first ? built_in(first) : NULL;
+        if (!b) continue;
         if ((t = fopen(to, "wb"))) {
-            char buf[16384];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof buf, f)) > 0) fwrite(buf, 1, n, t);
+            fwrite(b->data, 1, (size_t)(b->end - b->data), t);
             fclose(t);
             api->log("dumb_sounds: made %s from %s", CHOICES[c].file, first);
         }
-        fclose(f);
     }
 }
 
@@ -697,6 +739,9 @@ BB_PLUGIN_EXPORT int bb_plugin_image(const BbHostApi* host) {
     ma_mutex_init(&lock);
     engine_ok = ma_engine_init(NULL, &engine) == MA_SUCCESS;
     if (!engine_ok) api->log("dumb_sounds: no sound device; the game's sounds stay");
+    for (size_t i = 0; engine_ok && i < sizeof BUILT_INS / sizeof BUILT_INS[0]; i++)
+        ma_resource_manager_register_encoded_data(ma_engine_get_resource_manager(&engine), BUILT_INS[i].file,
+                                                  BUILT_INS[i].data, (size_t)(BUILT_INS[i].end - BUILT_INS[i].data));
     make_custom_files();
     load_rules();
     apply_settings();
@@ -708,7 +753,7 @@ BB_PLUGIN_EXPORT int bb_plugin_image(const BbHostApi* host) {
                                       0x55, 0x41, 0x54, 0x53, 0x48, 0x83, 0xec, 0x18};
     int a = api->hook2(PLAY_NAMED, pro_a, sizeof pro_a, on_play, NULL);
     int b = api->hook2(PLAY_NAMED_B, pro_b, sizeof pro_b, on_play, NULL);
-    api->log("dumb_sounds: hooks %d %d (0 = in place), sounds from %s", a, b, dir);
+    api->log("dumb_sounds: hooks %d %d (0 = in place), folder %s", a, b, dir);
     if (a != 0 && b != 0) return 1;
 
     api->on_frame(on_frame, NULL);

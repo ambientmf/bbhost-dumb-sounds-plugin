@@ -16,7 +16,7 @@ Each also has **Custom**: `custom_hit.wav`, `custom_headshot.wav`,
 `custom_beast_roar.wav` in the plugin's folder, which
 the plugin makes at its first start as copies of the first sound, to
 overwrite with your own WAV (then Reload sounds.txt in F9 if the game is
-running). An update extracted over the plugin leaves them alone. Off leaves the game's own sound. Each but the hit marker plays where the game plays its own:
+running). An update of the plugin leaves them alone. Off leaves the game's own sound. Each but the hit marker plays where the game plays its own:
 quieter with distance and from its side (F9's Positional sound; walls and
 rooms do not muffle it, as the game's own sounds are).
 Each has a volume of its own beside it and a Play button (in game) to hear
@@ -30,15 +30,20 @@ game's sound files stay as they are.
 
 ## Install
 
-Extract the release zip into bbhost's data folder, `%LOCALAPPDATA%\bbhost\data`
-by default (or the `paths.data` of your `bbhost.toml`):
+The plugin is one file, `dumb_sounds.dll`, with its sounds inside it. Extract
+the release zip into bbhost's data folder, `%LOCALAPPDATA%\bbhost\data` by
+default (or the `paths.data` of your `bbhost.toml`), which stays put when
+bbhost is updated:
 
 ```
 plugins\dumb_sounds.dll
-plugins\dumb_sounds\        the sounds, and sounds.txt once it has run
 ```
 
-The data folder stays put when bbhost is updated.
+or copy `dumb_sounds.dll` into the `plugins` folder beside `bbhost.exe`.
+
+The plugin's folder, `plugins\dumb_sounds` in the data folder, is made at the
+first start: `sounds.txt`, the `custom_*.wav` files and any sounds of your own
+live there.
 
 ## Rules: sounds.txt
 
@@ -58,7 +63,9 @@ beast_roar  s000202002  link-fall-down.wav
 - `NAME`: one word, shown in `sounds.log`. `parry`, `headshot`, `hit` and
   `beast_roar` take their sound and volume from F9; others their `FILE`.
 - `EVENT`: the game's event; a name ending in `*` covers every name it starts.
-- `FILE`: a WAV, MP3 or FLAC in that folder, or a full path; `-` silences the
+- `FILE`: a built-in sound by its name (`hit.wav`, `parry.wav`, ...: the ones
+  the default rules and F9 use), a WAV, MP3 or FLAC in that folder, or a full
+  path; `-` silences the
   event with nothing in its place. A file that does not load leaves the
   game's sound.
 - `VOLUME`: 0-2, 1 (the default) the file as it is.
@@ -85,9 +92,9 @@ each time.
 ## Build
 
 ```sh
-tools/build-plugin.sh <bbhost checkout>   # build/dumb_sounds.dll (clang, mingw-w64 target)
 tools/fetch-sounds.sh                     # build/sounds/unleveled/{hit,headshot}.wav (yt-dlp, ffmpeg)
 tools/level-sounds.sh                     # build/sounds/*.wav at the level they play at volume 1
+tools/build-plugin.sh <bbhost checkout>   # build/dumb_sounds.dll, the leveled sounds inside it (clang, mingw-w64 target)
 tools/package.sh <bbhost checkout>        # all of the above into build/dumb_sounds-<version>.zip
 ```
 
