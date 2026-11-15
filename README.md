@@ -31,23 +31,23 @@ game's sound files stay as they are.
 ## Install
 
 The plugin is one file, `dumb_sounds.dll`, with its sounds inside it. Extract
-the release zip into bbhost's data folder, `%LOCALAPPDATA%\bbhost\data` by
-default (or the `paths.data` of your `bbhost.toml`), which stays put when
-bbhost is updated:
+the release zip into bbhost's folder, `%APPDATA%\bbhost` (where `bbhost.toml`
+is), which stays put when bbhost is updated:
 
 ```
-plugins\dumb_sounds.dll
+%APPDATA%\bbhost\plugins\dumb_sounds.dll
 ```
 
-or copy `dumb_sounds.dll` into the `plugins` folder beside `bbhost.exe`.
+The `plugins` folder beside `bbhost.exe` works too.
 
-The plugin's folder, `plugins\dumb_sounds` in the data folder, is made at the
-first start: `sounds.txt`, the `custom_*.wav` files and any sounds of your own
-live there.
+The plugin's folder is `%LOCALAPPDATA%\bbhost\data\plugins\dumb_sounds` (in
+your own data folder, if `bbhost.toml` sets `paths.data`), made at the first
+start: `sounds.txt`, the `custom_*.wav` files and any sounds of your own live
+there.
 
 ## Rules: sounds.txt
 
-The plugin writes `plugins\dumb_sounds\sounds.txt` at its first start: one rule
+The plugin writes `sounds.txt` in its folder at its first start: one rule
 a line, the first whose event matches is used.
 
 ```
